@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>去中心化銀行 DApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #111; color: #eee; padding: 20px; }
+    h2, h3 { color: rgb(58, 148, 221); }
+    input, button, select, textarea { margin: 5px; padding: 5px; }
+    #account { color: #ff0; }
+    textarea { width: 100%; height: 60px; }
+  </style>
+</head>
+<body>
+  <h2> 去中心化銀行 DApp </h2>
+
+  <div>
+    <button onclick="connectWallet()"> 連接 MetaMask</button>
+    <div id="account">尚未連接</div>
+  </div>
+
+  <div id="ethPriceNow">ETH 價格載入中...</div>
+  <div id="userInfo">帳戶資訊載入中...</div>
+  <div id="rewardInfo"> 獎勵參數讀取中...</div>
+  <div id="lpInfo"> 讀取 LP 資訊中...</div>
+  <div id="previewInterestBox"> 預覽利息載入中...</div>
+  <div id="errorBox" style="color: red; font-weight: bold;"></div>
+
+  <h3> 流動性提供者功能（LP）</h3>
+  <div>
+    <input type="text" id="lpSupplyAmount" placeholder="提供 mDAI 數量" />
+    <button onclick="lpSupply()"> 存入 mDAI（供應）</button>
+  </div>
+  <div>
+    <input type="text" id="lpRedeemAmount" placeholder="贖回 aMDAI 數量" />
+    <button onclick="lpRedeem()"> 贖回 mDAI</button>
+    <div>可領取獎勳（LP）：<span id="unclaimedLP">載入中...</span></div>
+    <button onclick="claimRewardLP()">領取 LP 獎勳</button>
+  </div>
+
+  <h3> 可被清算帳戶列表</h3>
+  <button onclick="fetchLiquidatableUsers()"> 更新清算名單</button>
+  <ul id="liquidatableList"></ul>
+
+  <h3> 抵押與借貸</h3>
+  <div>
+    <input type="text" id="depositAmount" placeholder="存入 ETH 數量" />
+    <button onclick="depositETH()">存入 ETH</button>
+  </div>
+  <div>
+    <input type="text" id="borrowAmount" placeholder="借出 mDAI 數量" />
+    <button onclick="borrow()">借出 mDAI</button>
+  </div>
+  <div>
+    <input type="text" id="repayAmount" placeholder="償還 mDAI 數量" />
+    <button onclick="repay()">償還 mDAI</button>
+    <button onclick="repayAll()"> 一鍵還清</button>
+  </div>
+  <div>
+    <input type="text" id="withdrawAmount" placeholder="提取 ETH 數量" />
+    <button onclick="withdrawCollateral()">提取 ETH</button>
+    <div>可領取獎勳（Borrower）：<span id="unclaimedBorrower">載入中...</span></div>
+    <button onclick="claimRewardBorrower()">領取借款人獎勳</button>
+  </div>
+
+<!-- 🔔 發幣上限提醒 -->
+<div id="rewardCapWarning" style="color: orange; font-weight: bold; margin-top: 5px;"></div>
+
+  <h3> 清算帳戶</h3>
+  <div>
+    <input type="text" id="liquidateUser" placeholder="要清算的地址" />
+    <input type="text" id="liquidateAmount" placeholder="mDAI 數量" />
+    <button onclick="estimateMaxLiquidateUI()"> 建議最大清償額度</button>
+    <button onclick="liquidateUser()"> 清算</button>
+  </div>
+  <div id="maxRepayHint" style="margin-top: 5px; color: #0f0;"></div>
+
+
+  <div>
+    <input type="text" id="ethPriceInput" placeholder="模擬 ETH 價格 (USD)" />
+    <button onclick="simulatePriceChange()">模擬價格變動</button>
+  </div>
+
+  <h3> DAO 治理控制區</h3>
+  <div>
+    <button onclick="delegateVotes()"> 委託投票權給自己</button>
+    <div id="votingInfo"> 讀取中...</div>
+  </div>
+  <div id="quorumInfo"> 提案有效門檻：尚未查詢</div>
+
+  <h3> 所有提案清單</h3>
+  <button onclick="fetchProposalList()"> 查詢提案</button>
+  <ul id="proposalHistoryList"></ul>
+
+
+  <h4> 提案設定</h4>
+  <div>
+    <label for="newProposalThreshold">提案門檻（BKT）</label>
+    <select id="newProposalThreshold">
+      <option value="0.01">0.01</option>
+      <option value="0.1" selected>0.1</option>
+      <option value="10">10</option>
+      <option value="100">100</option>
+    </select>
+    <textarea id="proposalDescThreshold" placeholder="提案描述"></textarea>
+    <button onclick="proposeChangeProposalThreshold()"> 調整提案門檻</button>
+  </div>
+
+  <div>
+    <label for="newInterestRate">選擇新利率（% 年利率）</label>
+    <select id="newInterestRate">
+      <option value="100">1%</option>
+      <option value="300">3%</option>
+      <option value="500" selected>5%</option>
+      <option value="700">7%</option>
+      <option value="1000">10%</option>
+      <option value="1500">15%</option>
+    </select>
+    <textarea id="proposalDesc" placeholder="提案描述"></textarea>
+    <button onclick="proposeChangeInterest()"> 調整利率</button>
+  </div>
+
+  <div>
+    <label for="newReserveFactor">協議收益比例（%）</label>
+    <select id="newReserveFactor">
+      <option value="500">5%</option>
+      <option value="1000" selected>10%</option>
+      <option value="1500">15%</option>
+      <option value="2000">20%</option>
+    </select>
+    <textarea id="proposalDescReserveFactor" placeholder="提案描述"></textarea>
+    <button onclick="proposeChangeReserveFactor()"> 調整 reserveFactor</button>
+  </div>
+
+  <div>
+    <label for="newDailyCap">每日發幣上限（BKT）</label>
+    <select id="newDailyCap">
+      <option value="1000000000000000000000">1,000</option>
+      <option value="5000000000000000000000">5,000</option>
+      <option value="10000000000000000000000" selected>10,000</option>
+      <option value="20000000000000000000000">20,000 </option>
+    </select>
+    <textarea id="proposalDescCap" placeholder="提案描述"></textarea>
+    <button onclick="proposeChangeDailyCap()"> 調整 dailyCap</button>
+  </div>
+
+  <div>
+    <label for="newQuorumPercent">有效票數門檻（%）</label>
+    <select id="newQuorumPercent">
+      <option value="2">2%</option>
+      <option value="4" selected>4%</option>
+      <option value="10">10%</option>
+      <option value="20">20%</option>
+    </select>
+    <textarea id="proposalDescQuorum" placeholder="提案描述"></textarea>
+    <button onclick="proposeChangeQuorumPercent()"> 調整 quorumPercent</button>
+  </div>
+
+  <div>
+    <label for="newLPRewardRatio"> LP 發幣速率（每天每 USD 發幾顆 BKT）</label>
+    <select id="newLPRewardRatio">
+      <option value="115740740740">0.01 BKT / USD</option>
+      <option value="318287037037" selected>0.0275 BKT / USD</option>
+      <option value="578703703703">0.05 BKT / USD</option>
+      <option value="1157407407407">0.1 BKT / USD</option>
+    </select>
+    <textarea id="proposalDescLPReward" placeholder="為什麼要調整 LP 發幣速率？"></textarea>
+    <button onclick="proposeSetLPRewardRatio()"> 調整 LP 發幣速率</button>
+  </div>
+
+  <div>
+    <label for="newBorrowerRewardRatio"> 借款人發幣速率（每天每 USD 發幾顆 BKT）</label>
+    <select id="newBorrowerRewardRatio">
+      <option value="115740740740">0.01 BKT / USD</option>
+      <option value="318287037037" selected>0.0275 BKT / USD</option>
+      <option value="578703703703">0.05 BKT / USD</option>
+      <option value="1157407407407">0.1 BKT / USD</option>
+    </select>
+    <textarea id="proposalDescBorrowerReward" placeholder="為什麼要調整 Borrower 發幣速率？"></textarea>
+    <button onclick="proposeSetBorrowerRewardRatio()"> 調整 Borrower 發幣速率</button>
+  </div>
+
+  <div>
+    <label for="injectLPAmount">注入流動性池金額（mDAI）</label>
+    <select id="injectLPAmount">
+      <option value="10000000000000000000">10</option>
+      <option value="20000000000000000000">20</option>
+      <option value="30000000000000000000">30</option>
+      <option value="50000000000000000000" selected>50</option>
+    </select>
+    <textarea id="proposalDescInjectLP" placeholder="提案描述：為何要注入 LP？"></textarea>
+    <button onclick="proposeInjectToLP()"> 注入 Liquidity Pool</button>
+  </div>
+
+
+  <h4>📌 投票與執行</h4>
+  <div>
+    <button onclick="fetchProposals()">🔍 載入提案列表</button>
+    <div id="votingProposalList">尚未加載</div>
+    <input type="text" id="proposalId" placeholder="提案 ID" />
+    <select id="voteType">
+      <option value="1">✅ 支持 👍</option>
+      <option value="0">❌ 反對 👎</option>
+      <option value="2">🤷‍♂️ 棄權</option>
+    </select>
+    <button onclick="castVote()">🗳️ 投票</button>
+  </div>
+  <h4>⏳ 最近提案快速操作</h4>
+  <div>
+    <input type="text" id="queueProposalId" placeholder="提案 ID（要排程）" />
+    <textarea id="queueDescription" placeholder="提案描述（需與當初描述完全相同）"></textarea>
+    <select id="queueFunc">
+      <option value="">請選擇函式</option>
+      <option value="setInterestRate">setInterestRate</option>
+      <option value="setRewardRatio">setRewardRatio</option>
+      <option value="setDailyCap">setDailyCap</option>
+      <option value="setReserveFactor">setReserveFactor</option>
+      <option value="setProposalThreshold">setProposalThreshold</option>
+      <option value="setQuorumPercent">setQuorumPercent</option>
+    </select>
+    <input type="text" id="queueValue" placeholder="參數（如 700）" />
+    <button onclick="queueProposal()">⏳ 排程提案</button>
+  </div>
+
+  <h4>📌 提案執行</h4>
+  <div>
+    <input type="text" id="execProposalId" placeholder="提案 ID（要執行）" />
+    <textarea id="execDescription" placeholder="提案描述（需與當初描述完全相同）"></textarea>
+    <select id="execFunc">
+      <option value="">請選擇函式</option>
+      <option value="setInterestRate">setInterestRate</option>
+      <option value="setRewardRatio">setRewardRatio</option>
+      <option value="setDailyCap">setDailyCap</option>
+      <option value="setReserveFactor">setReserveFactor</option>
+      <option value="setProposalThreshold">setProposalThreshold</option>
+      <option value="setQuorumPercent">setQuorumPercent</option>
+    </select>
+    <input type="text" id="execValue" placeholder="參數（如 700）" />
+    <button onclick="executeProposal()">✅ 執行提案</button>
+  </div>
+
+  <h4> 查詢提案狀態</h4>
+  <div>
+    <input type="text" id="statusProposalId_state" placeholder="輸入 Proposal ID（查狀態）" />
+    <button onclick="checkProposalState()">查詢狀態</button>
+    <div id="proposalStatusResult">查詢結果會顯示在這裡</div>
+  </div>
+
+<h4> 查詢提案票數</h4>
+<div>
+  <input type="text" id="statusProposalId_votes" placeholder="輸入 Proposal ID（查票數）" />
+  <button onclick="checkProposalVotes()">查詢票數 (含 quorum)</button>
+  <div id="proposalVotesResult">票數查詢結果會顯示在這裡</div>
+</div>
+
+
+  <script src="app.js"></script>
+  <script>
+    window.onload = () => {
+      connectWallet();
+    };
+  </script>
+</body>
+</html>

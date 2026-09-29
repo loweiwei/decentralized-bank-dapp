@@ -1,0 +1,37 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "PriceOracle",
+  "sourceName": "contracts/PriceOracle.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getLatestETHPrice",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_price",
+          "type": "uint256"
+        }
+      ],
+      "name": "setPrice",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60808060405234601d5764174876e80060005560a090816100238239f35b600080fdfe6080806040526004361015601257600080fd5b600090813560e01c908163777e0d8614604e57506391b7f5ed14603457600080fd5b34604b576020366003190112604b57600435815580f35b80fd5b90503460665781600319360112606657602091548152f35b5080fdfea2646970667358221220ee80b0ae7bef8a6f3a003a5381fb17fcc69a74cc29100ba7126bdaac7f61b8b864736f6c63430008140033",
+  "deployedBytecode": "0x6080806040526004361015601257600080fd5b600090813560e01c908163777e0d8614604e57506391b7f5ed14603457600080fd5b34604b576020366003190112604b57600435815580f35b80fd5b90503460665781600319360112606657602091548152f35b5080fdfea2646970667358221220ee80b0ae7bef8a6f3a003a5381fb17fcc69a74cc29100ba7126bdaac7f61b8b864736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

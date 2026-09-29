@@ -1,0 +1,25 @@
+{
+  "name": "decentralized-bank-dapp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Decentralized banking DApp built with Hardhat, Solidity, ethers.js, and OpenZeppelin governance.",
+  "devDependencies": {
+    "@nomicfoundation/ethereumjs-util": "^9.0.4",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "ethereumjs-util": "^7.1.5",
+    "hardhat": "^2.24.0",
+    "hardhat-tracer": "^3.2.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.3"
+  }
+}
